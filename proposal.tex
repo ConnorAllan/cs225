@@ -1,0 +1,124 @@
+\documentclass{article}
+
+\usepackage{microtype}
+
+\usepackage{amsmath}
+\usepackage{mathtools}
+
+\title{CS225 Spring 2018---Final Project Proposal}
+\author{
+  David Darais \\ \small{\texttt{git:@davdar}}
+  \and Author2
+  \and Author3
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Project: System F with Existential Types}
+
+We propose to implement a semantics and type checker for System F extended with
+existential types (pack and unpack).
+
+\paragraph{Base Language}
+
+We will work with simply typed lambda calculus with booleans, natural numbers,
+let-binding, and products as the base language.
+
+\paragraph{Extended Language}
+
+We will extend this language with the features of System F and existential
+types. This consists of three new types:
+\begin{enumerate}
+\item A type variable, written $X$
+\item A universally quantified type, written $\forall X.\tau$
+\item An existentially quantified type, written $\exists X.\tau$
+\end{enumerate}
+and four new terms:
+\begin{enumerate}
+\item Type abstraction, written $\Lambda X.e$
+\item Type application, written $e[\tau]$
+\item Type packing, written $\langle * \tau' , e \rangle \mathrel{\texttt{as}} \exists X . \tau$
+\item Type unpacking, written $\texttt{let}\ \langle * X , x , \rangle
+  \coloneqq e_1\ \texttt{in}\ e_2$
+\end{enumerate}
+
+
+\paragraph{Applications}
+
+Universally quantified types have applications to polymorphic
+programs---programs which can be instantiated to work over any type, rather
+than just one fixed type. For example, Java supports first-order polymorphic
+programming \textit{via} universal quantification through the feature
+\textit{generics}. Generics are used heavily in the Java standard library,
+\emph{e.g.}, \verb|ArrayList<T>|, to support collections which range over some
+arbitrary type \verb|T|. OCaml supports first-order polymorphic programming
+\textit{via} universal quantification through type variables \verb|'a| and
+inferred polymorphic types, \emph{e.g.}, in the type of list map:
+\begin{verbatim}
+map : ('a -> 'b) -> 'a list -> 'b list
+\end{verbatim}
+
+There are fewer instances of higher-order polymorphic programming in practice.
+However, the support for higher-order universal quantification in System F
+makes it suitable for use as a proof format language for higher-order logic.
+
+Existentially quantified types have applications to module systems and data
+abstraction. For example, Java supports data abstraction through
+object-orientation, where \emph{e.g.}, a value of type \verb|Object| could have
+some more precise type like \verb|Integer|, but this information is ``hidden'',
+and all that is known about values at type \verb|Object| is that they support
+some restricted set of operations, such as \verb|.toString()|,
+\verb|.equals(Object)|, \emph{etc.}. In OCaml, the module system supports
+first-class data abstraction, and can be seen as an instance of existential
+types. OCaml also supports Generalized Algebraic Datatypes (GADTs), which
+supports existential quantification in the base language, rather than in a
+separate module language.
+
+\paragraph{Project Goals}
+
+For this project, we plan to complete:
+\begin{enumerate}
+\item A small-step semantics for System F extended with existential types
+\item A type checker for System F extended with existential types
+\end{enumerate}
+
+\paragraph{Expected Challenges}
+
+We expect the need to support capture-avoiding substitution to make the
+implementation of the typechecker more challenging than what we have seen in
+class thus far.
+
+\paragraph{Timeline and Milestones}
+
+By the checkpoint we hope to have completed:
+\begin{enumerate}
+\item A prototype implementation of the small-step semantics
+\item A suite of test-cases for the small-step semantics and well-typed relation
+\item One medium-sized program encoded in the language which demonstrates a
+  real-world application of the language
+\end{enumerate}
+
+\noindent
+By the final project draft we hope to have completed:
+\begin{enumerate}
+\item The full implementation of small-step semantics and type checking
+\item A fully comprehensive test suite, with all tests passing
+\item The medium-sized program running through both the semantics and type
+  checker implementation
+\item A draft writeup that explains the on-paper formalism of our
+  implementation
+\item A draft of a presentation with 5 slides as the starting point for our
+  in-class presentation
+\end{enumerate}
+
+\noindent
+By the final project submissions we hope to have completed:
+\begin{enumerate}
+\item The final writeup and presentation
+\item Any remaining implementation work that was missing in the final project
+  draft
+\end{enumerate}
+
+\end{document}
