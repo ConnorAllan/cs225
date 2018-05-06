@@ -14,6 +14,7 @@ exception NOT_FOUND
  * τ ∈ ty ⩴ bool
  *        | val
  *        | prod(ty,ty)
+ *        | exp(ty) | ref(ty)
 *)
 type ty =
   | Bool
@@ -28,7 +29,6 @@ type ty =
  * e ∈ exp ⩴ true | false | if(e){e}{e}
  *         | ⟨e,e⟩ | projl(e) | projr(e)
  *         | try (e) with (e) | raise(e)
- *         | error
 *)
 
 (* ℓ ∈ loc ≈ ℕ
@@ -170,10 +170,7 @@ let rec infer (e : exp) (st : store_ty) : ty = match e with
     end
   | Raise(e1) ->
     let t1 = infer e1 st in
-    begin match t1 with
-      | Exp(t) -> t
-      | _ -> raise TYPE_ERROR
-    end
+    Exp(t1)
   | Try(e1,e2) ->
     let t1 = infer e1 st in
     let t2 = infer e2 st in
@@ -183,7 +180,6 @@ let rec infer (e : exp) (st : store_ty) : ty = match e with
 
   let step_tests : test_block =
     let s1 : store = [(1,VTrue);(2,VFalse)] in
-    let s2 : store = [(1,VTrue);(2,VTrue)] in
     TestBlock
     ( "STEP"
     , [ (True,s1)                                              , Val(VTrue)
@@ -198,6 +194,11 @@ let rec infer (e : exp) (st : store_ty) : ty = match e with
       ; (Projr(Pair(True,False)),s1)                           , Step(False,s1)
       ; (Projr(True),s1)                                       , Stuck
       ; (Projr(If(True,Pair(True,False),Pair(False,True))),s1) , Step(Projr(Pair(True,False)),s1)
+      ; (Raise(True),s1)                                       , Step(True,s1)
+      ; (Raise(Projr(True)),s1)                                , Stuck
+      ; (Raise(If(True,Pair(False,True),False)),s1)            , Step(Raise(Pair(False,True)),s1)
+      ; (Try(True,False),s1)                                   , Step(True,s1)
+      ; (Try(If(True,Pair(True,False),False),Projl(True)),s1)  , Step(Try(Pair(True,False),Projl(True)),s1)
       ]
     , (fun (e,s) -> step e s)
     , [%show : exp * store]
@@ -211,6 +212,8 @@ let infer_tests =
     , [ True                                                 , Bool
       ; False                                                , Bool
       ; If(True,False,True)                                  , Bool
+      ; Raise(True)                                          , Exp(Bool)
+      ; Try(True,False)                                      , Bool
       ]
     , (fun e -> infer e st)
     , (fun e -> [%show : exp * store_ty] (e,st))
