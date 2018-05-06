@@ -8,4 +8,5 @@ To build the code for this project you will need to first download OCaml and Opa
 To read the proposal download and install a LaTeX on your machine and parse the code either through an IDE or use the same method used for the OCaml, make proposal.
 
 Challenges run into:
-1. Figuring out how to deal with type expresion
+1. Figuring out how to deal with type expressions
+2. Type cases for testing
