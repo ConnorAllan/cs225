@@ -2,10 +2,10 @@
 (* Name: Aaron Longchamp *)
 (* Course: UVM CS 225 Spring 2018 - Darais *)
 (* Final Project *)
-(*
+
 open Util
 open StringSetMap
-*)
+
 
 exception NOT_FOUND
 
