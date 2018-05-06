@@ -19,6 +19,8 @@ type ty =
   | Bool
   | Val
   | Prod of ty * ty
+  | Ref of ty
+  | Exp of ty
 [@@deriving show {with_path = false}]
 
 (* Expressions.
@@ -133,9 +135,11 @@ let rec step (e0 : exp) (s : store) : result = match e0 with
 type store_ty = (loc * ty) list
 [@@deriving show {with_path = false}]
 
-let rec store_ty_lookup (l : loc) (st : store) : ty = match st with
+let rec store_ty_lookup (l : loc) (st : store_ty) : ty = match st with
   | [] -> raise NOT_FOUND
   | (l',t) :: st' -> if l = l' then t else store_ty_lookup l st'
+
+exception TYPE_ERROR
 
 (*  INFER *)
   let rec infer (e : exp) (st : store_ty) : ty = match e with
@@ -168,12 +172,11 @@ let rec store_ty_lookup (l : loc) (st : store) : ty = match st with
       let t1 = infer e1 st in
       begin match t1 with
       | Exp(t) -> t
-      | _ -> TYPE_ERROR
+      | _ -> raise TYPE_ERROR
       end
     | Try(e1,e2) ->
       let t1 = infer e1 st in
       let t2 = infer e2 st in
-      if not (t1 = t2) then raise TYPE_ERROR
+      if not (t1 = t2) then raise TYPE_ERROR else
       t1
     | Loc(l) -> Ref(store_ty_lookup l st)
-  end
