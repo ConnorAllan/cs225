@@ -2,20 +2,23 @@
 (* Name: Aaron Longchamp *)
 (* Course: UVM CS 225 Spring 2018 - Darais *)
 (* Final Project *)
-
+(*
 open Util
 open StringSetMap
+*)
+
+exception NOT_FOUND
 
 (* Types.
  *
  * τ ∈ ty ⩴ bool
  *        | val
- *        | error
+ *        | prod(ty,ty)
  *)
 type ty =
   | Bool
   | Val
-  | Error
+  | Prod of ty * ty
 [@@deriving show {with_path = false}]
 
 (* Expressions.
@@ -39,9 +42,7 @@ type exp =
   | Projl of exp
   | Projr of exp
   | Loc of loc
-  | Error
   | Try of exp * exp
-  | TryWith of exp * exp
   | Raise of exp
 [@@deriving show {with_path = false}]
 
@@ -56,7 +57,7 @@ type value =
   | VFalse
   | VPair of value * value
   | VLoc of loc
-  | VError
+
 [@@deriving show {with_path = false}]
 
 let rec exp_of_val (v : value) : exp = match v with
@@ -64,7 +65,6 @@ let rec exp_of_val (v : value) : exp = match v with
   | VFalse -> False
   | VPair(v1,v2) -> Pair(exp_of_val v1,exp_of_val v2)
   | VLoc(l) -> Loc(l)
-  | VError -> Error
 
 type store = (loc * value) list
 [@@deriving show {with_path = false}]
@@ -75,6 +75,7 @@ type result =
   | Val of value
   | Step of exp * store
   | Stuck
+  | Error
 [@@deriving show {with_path = false}]
 
 (*  Step functions*)
@@ -86,35 +87,55 @@ let rec step (e0 : exp) (s : store) : result = match e0 with
       | Val(VFalse) -> Step(e3,s)
       | Val(_) -> Stuck
       | Step(e1',s') -> Step(If(e1',e2,e3),s')
+      | Error -> Error
       | Stuck -> Stuck
       end
   | Pair(e1,e2) -> begin match step e1 s with
       | Val(v1) -> begin match step e2 s with
           | Val(v2) -> Val(VPair(v1,v2))
           | Step(e2',s') -> Step(Pair(e1,e2'),s')
+          | Error -> Error
           | Stuck -> Stuck
           end
       | Step(e1',s') -> Step(Pair(e1',e2),s')
+      | Error -> Error
       | Stuck -> Stuck
       end
   | Projl(e1) -> begin match step e1 s with
       | Val(VPair(v1,v2)) -> Step(exp_of_val v1,s)
       | Val(_) -> Stuck
       | Step(e1',s') -> Step(Projl(e1'),s')
+      | Error -> Error
       | Stuck -> Stuck
       end
   | Projr(e1) -> begin match step e1 s with
       | Val(VPair(v1,v2)) -> Step(exp_of_val v2,s)
       | Val(_) -> Stuck
       | Step(e1',s') -> Step(Projr(e1'),s')
+      | Error -> Error
       | Stuck -> Stuck
       end
   | Loc(l) -> Val(VLoc(l))
-  | Error -> Val(VError)
-  | Raise(e1) -> Val(VError)
+  | Raise(e1) -> begin match step e1 s with
+      | Val(v1) -> Step(exp_of_val v1, s)
+      | Step(e1',s') -> Step(Raise(e1'),s')
+      | Error -> Error
+      | Stuck -> Stuck
+    end
   | Try(e1,e2) ->
-  | TryWith(e1,e2) ->
-end
+    begin match step e1 s with
+      | Val(v1) -> Step(exp_of_val v1, s)
+      | Error -> Step(e2,s)
+      | Step(e1',s) -> Step(Try(e1',e2),s)
+      | Stuck -> Stuck
+    end
+
+type store_ty = (loc * ty) list
+[@@deriving show {with_path = false}]
+
+let rec store_ty_lookup (l : loc) (st : store) : ty = match st with
+  | [] -> raise NOT_FOUND
+  | (l',t) :: st' -> if l = l' then t else store_ty_lookup l st'
 
 (*  INFER *)
   let rec infer (e : exp) (st : store_ty) : ty = match e with
@@ -126,7 +147,11 @@ end
         let t3 = infer e3 st in
         if not (t1 = Bool) then raise TYPE_ERROR else
         if not (t2 = t3) then raise TYPE_ERROR else
-        t2
+          t2
+    | Pair(e1,e2) ->
+      let t1 = infer e1 st in
+      let t2 = infer e2 st in
+      Prod(t1,t2)
     | Projl(e1) ->
       let t1 = infer e1 st in
       begin match t1 with
@@ -139,24 +164,16 @@ end
       | Prod(_,t12) -> t12
       | _ -> raise TYPE_ERROR
       end
-    | Error(e1)
-      let t1 = infer e1 st in
-      t1
-    | Raise(e1)
+    | Raise(e1) ->
       let t1 = infer e1 st in
       begin match t1 with
       | Exp(t) -> t
       | _ -> TYPE_ERROR
       end
-    | Try(e1,e2)
+    | Try(e1,e2) ->
       let t1 = infer e1 st in
       let t2 = infer e2 st in
       if not (t1 = t2) then raise TYPE_ERROR
       t1
-    | TryWith(e1,e2)
-      let t1 = infer e1 st in
-      let t2 = infer e2 st in
-      begin match t2 with
-      | Exp(t) -> if (t1 = t) then t1 else raise TYPE_ERROR
-      | _ -> raise TYPE_ERROR
+    | Loc(l) -> Ref(store_ty_lookup l st)
   end
